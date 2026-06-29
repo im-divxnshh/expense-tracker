@@ -52,7 +52,9 @@ export function PeoplePage() {
   const [sort, setSort] = React.useState<SortKey>("recent");
   const [page, setPage] = React.useState(1);
   const [editing, setEditing] = React.useState<Person | null>(null);
-  const [deleting, setDeleting] = React.useState<PersonWithBalance | null>(null);
+  const [deleting, setDeleting] = React.useState<PersonWithBalance | null>(
+    null,
+  );
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,7 +85,10 @@ export function PeoplePage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, totalPages);
-  const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const pageItems = filtered.slice(
+    (current - 1) * PAGE_SIZE,
+    current * PAGE_SIZE,
+  );
 
   React.useEffect(() => setPage(1), [query, sort]);
 
@@ -98,6 +103,7 @@ export function PeoplePage() {
         title="People"
         description="Everyone you have lent to or received money from."
         actions={
+          // PersonFormDialog now owns the contact import button internally
           <PersonFormDialog
             trigger={
               <Button>
@@ -152,11 +158,17 @@ export function PeoplePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead className="text-right">Given</TableHead>
-                <TableHead className="text-right">Received</TableHead>
+                <TableHead className="hidden text-right sm:table-cell">
+                  Given
+                </TableHead>
+                <TableHead className="hidden text-right sm:table-cell">
+                  Received
+                </TableHead>
                 <TableHead className="text-right">Pending</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last activity</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Last activity
+                </TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -174,7 +186,11 @@ export function PeoplePage() {
                       href={`/people/${p.id}`}
                       className="flex items-center gap-3 font-medium hover:text-primary"
                     >
-                      <Avatar name={p.fullName} src={p.profileImageUrl} size="sm" />
+                      <Avatar
+                        name={p.fullName}
+                        src={p.profileImageUrl}
+                        size="sm"
+                      />
                       <div className="leading-tight">
                         <p>{p.fullName}</p>
                         {p.phone && (
@@ -185,20 +201,24 @@ export function PeoplePage() {
                       </div>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="hidden text-right sm:table-cell">
                     <Money amount={p.totalGiven} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="hidden text-right sm:table-cell">
                     <Money amount={p.totalReceived} />
                   </TableCell>
                   <TableCell className="text-right font-semibold">
                     <Money amount={p.pending} colored />
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={p.pending <= 0 ? "settled" : p.status} />
+                    <StatusBadge
+                      status={p.pending <= 0 ? "settled" : p.status}
+                    />
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.lastTransactionDate ? formatDate(p.lastTransactionDate) : "—"}
+                  <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
+                    {p.lastTransactionDate
+                      ? formatDate(p.lastTransactionDate)
+                      : "—"}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -259,7 +279,6 @@ export function PeoplePage() {
         </div>
       )}
 
-      {/* Edit dialog (controlled) */}
       {editing && (
         <PersonFormDialog
           person={editing}
