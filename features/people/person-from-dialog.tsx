@@ -98,18 +98,8 @@ export function PersonFormDialog({
     onOpenChange?.(value);
   };
 
-  // Contact Picker API availability
-  const [contactsSupported, setContactsSupported] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
-
-  React.useEffect(() => {
-    // The API is only available in secure contexts (HTTPS / localhost)
-    setContactsSupported(
-      typeof navigator !== "undefined" &&
-        "contacts" in navigator &&
-        "ContactsManager" in window,
-    );
-  }, []);
+  const [importError, setImportError] = React.useState<string | null>(null);
 
   // Form
   const form = useForm<FormValues>({
@@ -136,12 +126,23 @@ export function PersonFormDialog({
   // Contact import — lives here because `form` is in scope
   // -------------------------------------------------------------------------
   async function importContact() {
-    if (!navigator.contacts) return;
+    setImportError(null);
+
+    if (!("contacts" in navigator)) {
+      setImportError(
+        "Contact import isn't supported on this browser. Open the app on your Android or iOS phone to use this feature.",
+      );
+      return;
+    }
+
     setImporting(true);
     try {
-      const contacts = await navigator.contacts.select(["name", "tel"], {
-        multiple: false,
-      });
+      const contacts = await (navigator as any).contacts.select(
+        ["name", "tel"],
+        {
+          multiple: false,
+        },
+      );
       const contact = contacts?.[0];
       if (contact) {
         const name = contact.name?.[0]?.trim();
@@ -150,7 +151,7 @@ export function PersonFormDialog({
         if (tel) form.setValue("phone", tel, { shouldValidate: true });
       }
     } catch {
-      // User cancelled the picker or the browser threw — safe to ignore.
+      // User cancelled — no error needed
     } finally {
       setImporting(false);
     }
@@ -208,31 +209,27 @@ export function PersonFormDialog({
           <DialogTitle>{isEditing ? "Edit person" : "Add person"}</DialogTitle>
         </DialogHeader>
 
-        {/* Contact import — visible on all platforms.
-            Button only works on Android / iOS / macOS Safari (Contact Picker API).
-            On desktop Chrome/Firefox we show a hint instead. */}
+        {/* Contact import — always visible, works on Android/iOS/macOS Safari */}
         {!isEditing && (
-          <div className="rounded-lg border border-border bg-muted/40 px-4 py-3">
-            {contactsSupported ? (
-              <>
-                <p className="mb-2 text-sm text-muted-foreground">
-                  Fill the form automatically from your contacts.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={importing}
-                  onClick={importContact}
-                >
-                  <BookUser className="size-4" />
-                  {importing ? "Importing…" : "Import from contacts"}
-                </Button>
-              </>
-            ) : (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <BookUser className="size-4 shrink-0" />
-                Open on your phone to import a contact automatically.
+          <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Fill from your contacts
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={importing}
+                onClick={importContact}
+              >
+                <BookUser className="size-4" />
+                {importing ? "Importing…" : "Import contact"}
+              </Button>
+            </div>
+            {importError && (
+              <p className="text-xs text-destructive leading-snug">
+                {importError}
               </p>
             )}
           </div>
