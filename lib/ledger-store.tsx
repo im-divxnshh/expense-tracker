@@ -61,7 +61,22 @@ interface LedgerContextValue {
   deleteExpense: (id: string) => Promise<void>;
 
   saveSettings: (patch: Partial<Settings>) => Promise<void>;
+  importData: (data: ImportPayload) => Promise<ImportSummary>;
+  clearAllData: () => Promise<void>;
   refresh: () => Promise<void>;
+}
+
+export interface ImportPayload {
+  people?: Person[];
+  transactions?: Transaction[];
+  expenses?: Expense[];
+  settings?: Partial<Settings>;
+}
+
+export interface ImportSummary {
+  people: number;
+  transactions: number;
+  expenses: number;
 }
 
 const LedgerContext = createContext<LedgerContextValue | null>(null);
@@ -291,6 +306,60 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     [repo, settings],
   );
 
+  // ---- Bulk operations (restore / wipe) ----
+  const importData = useCallback(
+    async (data: ImportPayload): Promise<ImportSummary> => {
+      // Re-stamp every record so ids/timestamps are fresh and never collide.
+      const newPeople = (data.people ?? []).map((p) => stamp(p) as Person);
+      const newTxns = (data.transactions ?? []).map((t) => stamp(t) as Transaction);
+      const newExpenses = (data.expenses ?? []).map((e) => stamp(e) as Expense);
+      try {
+        await Promise.all([
+          ...newPeople.map((p) => repo.createPerson(p)),
+          ...newTxns.map((t) => repo.createTransaction(t)),
+          ...newExpenses.map((e) => repo.createExpense(e)),
+        ]);
+        if (data.settings) {
+          const next = { ...settings, ...data.settings, id: "settings" as const, updatedAt: Date.now() };
+          await repo.saveSettings(next);
+        }
+        await refresh();
+        toast.success(
+          `Imported ${newPeople.length} people, ${newTxns.length} transactions, ${newExpenses.length} expenses`,
+        );
+      } catch (err) {
+        console.error(err);
+        toast.error("Could not import data");
+        throw err;
+      }
+      return {
+        people: newPeople.length,
+        transactions: newTxns.length,
+        expenses: newExpenses.length,
+      };
+    },
+    [repo, settings, refresh],
+  );
+
+  const clearAllData = useCallback(async () => {
+    try {
+      await Promise.all([
+        ...people.map((p) => repo.softDeletePerson(p.id)),
+        ...transactions.map((t) => repo.softDeleteTransaction(t.id)),
+        ...expenses.map((e) => repo.softDeleteExpense(e.id)),
+      ]);
+      setPeople([]);
+      setTransactions([]);
+      setExpenses([]);
+      toast.success("All data cleared");
+    } catch (err) {
+      console.error(err);
+      await refresh();
+      toast.error("Could not clear data");
+      throw err;
+    }
+  }, [repo, people, transactions, expenses, refresh]);
+
   const peopleWithBalance = useMemo(
     () => personBalances(people, transactions),
     [people, transactions],
@@ -320,6 +389,8 @@ export function LedgerProvider({ children }: { children: React.ReactNode }) {
     updateExpense,
     deleteExpense,
     saveSettings,
+    importData,
+    clearAllData,
     refresh,
   };
 

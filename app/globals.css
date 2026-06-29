@@ -166,3 +166,19 @@
     transform: translateY(0);
   }
 }
+
+/* Print: drop the app chrome and glow so only the report content prints. */
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  .app-bg {
+    background: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

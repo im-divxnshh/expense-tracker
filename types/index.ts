@@ -45,6 +45,10 @@ export interface Person extends BaseDoc {
   reminderNotes?: string;
   status: PersonStatus;
   profileImageUrl?: string;
+  /** Last time a reminder was marked as sent for this person. */
+  lastRemindedAt?: number | null;
+  /** How many times this person has been reminded. */
+  reminderCount?: number;
 }
 
 export interface Transaction extends BaseDoc {
