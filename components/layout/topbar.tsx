@@ -6,6 +6,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBell } from "./notification-bell";
 import { Brand } from "./brand";
 import { NavLinks } from "./nav-links";
 import { NAV_ITEMS } from "@/constants/nav";
@@ -45,6 +46,7 @@ export function Topbar() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <NotificationBell />
         <ThemeToggle />
       </div>
     </header>

@@ -7,13 +7,17 @@ import {
   AlarmClock,
   BellRing,
   CalendarClock,
+  Check,
+  CheckCheck,
   CheckCircle2,
   Eye,
   MessageCircle,
+  MoreHorizontal,
   Phone,
   Users,
 } from "lucide-react";
 import { useLedger } from "@/lib/ledger-store";
+import { useReminderActions } from "./use-reminder-actions";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +25,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Money } from "@/components/money";
 import { reminderItems } from "@/lib/selectors";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -46,7 +57,8 @@ function relativeLabel(item: ReminderItem): string {
 }
 
 export function RemindersPage() {
-  const { peopleWithBalance, loading, updatePerson, settings } = useLedger();
+  const { peopleWithBalance, loading, settings } = useLedger();
+  const { markReceived, markComplete, markReminded } = useReminderActions();
 
   const items = React.useMemo(
     () => reminderItems(peopleWithBalance),
@@ -70,15 +82,6 @@ export function RemindersPage() {
       followUps: items.length,
     };
   }, [items]);
-
-  const markReminded = React.useCallback(
-    (item: ReminderItem) =>
-      updatePerson(item.person.id, {
-        lastRemindedAt: Date.now(),
-        reminderCount: (item.person.reminderCount ?? 0) + 1,
-      }),
-    [updatePerson],
-  );
 
   function whatsappHref(item: ReminderItem): string {
     const phone = (item.person.phone ?? "").replace(/[^\d]/g, "");
@@ -169,7 +172,9 @@ export function RemindersPage() {
                       item={item}
                       index={i}
                       whatsappHref={whatsappHref(item)}
-                      onRemind={() => markReminded(item)}
+                      onReceived={() => markReceived(item.person)}
+                      onComplete={() => markComplete(item.person)}
+                      onRemind={() => markReminded(item.person)}
                     />
                   ))}
                 </CardContent>
@@ -186,11 +191,15 @@ function ReminderRow({
   item,
   index,
   whatsappHref,
+  onReceived,
+  onComplete,
   onRemind,
 }: {
   item: ReminderItem;
   index: number;
   whatsappHref: string;
+  onReceived: () => void;
+  onComplete: () => void;
   onRemind: () => void;
 }) {
   const { person } = item;
@@ -234,14 +243,30 @@ function ReminderRow({
               </Button>
             </>
           )}
-          <Button asChild variant="ghost" size="icon-sm" aria-label="View profile">
-            <Link href={`/people/${person.id}`}>
-              <Eye className="size-4" />
-            </Link>
+          <Button variant="success" size="sm" onClick={onReceived}>
+            <Check className="size-4" /> Received
           </Button>
-          <Button variant="outline" size="sm" onClick={onRemind}>
-            <CheckCircle2 className="size-4" /> Remind
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onComplete}>
+                <CheckCheck className="size-4" /> Mark complete
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onRemind}>
+                <CheckCircle2 className="size-4" /> Mark reminded
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={`/people/${person.id}`}>
+                  <Eye className="size-4" /> View profile
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </motion.div>
